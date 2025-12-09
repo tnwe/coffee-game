@@ -49,11 +49,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 
-FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "..", "frontend_dist")
+FRONTEND_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../frontend_dist")
+)
 
-if os.path.exists(FRONTEND_DIST):
-    app.mount("/static", StaticFiles(directory=FRONTEND_DIST), name="static")
-
-    @app.get("/")
-    def serve_frontend():
-        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
+if os.path.exists(FRONTEND_PATH):
+    # Sert TOUT le dossier frontend_dist à la racine
+    app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
