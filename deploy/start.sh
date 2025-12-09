@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-echo "Build frontend"
+echo "Build frontend (on Render)"
 cd frontend
-npm install
+npm install        
 npm run build
 
 echo "Launch backend"
