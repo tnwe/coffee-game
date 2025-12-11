@@ -1,58 +1,10 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from pydantic import BaseModel
-from typing import List, Optional
-from .crud import init_db, add_game, list_games, compute_stats
-import json
-from datetime import date
-import pandas as pd
-from io import BytesIO
+from fastapi import FastAPI
+from .routers import players, games
+from .database import Base, engine
 
-app = FastAPI(title="Coffee Game API")
-init_db()
+Base.metadata.create_all(bind=engine)
 
-class GameIn(BaseModel):
-    date: Optional[date] = None
-    participants: List[str]
-    payer: str
-    fetcher: str
-    notes: Optional[str] = None
+app = FastAPI()
 
-@app.post("/games")
-def create_game(payload: GameIn):
-    d = payload.date or date.today()
-    g = add_game(d, payload.participants, payload.payer, payload.fetcher, payload.notes)
-    return {"ok": True, "game": g}
-
-@app.get("/games")
-def get_games(limit: int = 100, offset: int = 0):
-    return list_games(limit=limit, offset=offset)
-
-@app.get("/stats")
-def stats():
-    return compute_stats()
-
-@app.post("/import-excel")
-async def import_excel(file: UploadFile = File(...)):
-    contents = await file.read()
-    df = pd.read_excel(BytesIO(contents))
-    # expect columns: date, participants (comma separated), payer, fetcher, notes (optional)
-    required = {"date","participants","payer","fetcher"}
-    if not required.issubset(set(map(str.lower, df.columns))):
-        raise HTTPException(status_code=400, detail="Excel must contain columns: date, participants, payer, fetcher")
-    for _, row in df.iterrows():
-        d = pd.to_datetime(row['date']).date()
-        parts = [p.strip() for p in str(row['participants']).split(",") if p.strip()]
-        add_game(d, parts, row['payer'], row['fetcher'], row.get('notes', None))
-    return {"ok": True, "imported": len(df)}
-
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
-
-FRONTEND_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../frontend_dist")
-)
-
-if os.path.exists(FRONTEND_PATH):
-    # Sert TOUT le dossier frontend_dist à la racine
-    app.mount("/", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
+app.include_router(players.router)
+app.include_router(games.router)

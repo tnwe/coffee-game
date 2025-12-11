@@ -1,18 +1,23 @@
-from sqlmodel import SQLModel, Field
-from typing import Optional, List
-import json
-from datetime import date
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy.orm import relationship
+from .database import Base
 
-class Game(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    date: date
-    participants_json: str  # store JSON list of names
-    payer: str
-    fetcher: str
-    notes: Optional[str] = None
+class Player(Base):
+    __tablename__ = "players"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True)
 
-    def participants(self) -> List[str]:
-        try:
-            return json.loads(self.participants_json)
-        except:
-            return []
+class Game(Base):
+    __tablename__ = "games"
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date)
+    payer_id = Column(Integer, ForeignKey("players.id"))
+    fetcher_id = Column(Integer, ForeignKey("players.id"))
+
+    payer = relationship("Player", foreign_keys=[payer_id])
+    fetcher = relationship("Player", foreign_keys=[fetcher_id])
+
+class GamePlayer(Base):
+    __tablename__ = "game_players"
+    game_id = Column(Integer, ForeignKey("games.id"), primary_key=True)
+    player_id = Column(Integer, ForeignKey("players.id"), primary_key=True)
